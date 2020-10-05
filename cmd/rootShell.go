@@ -131,11 +131,11 @@ func RunGitCommandWithArgs(args []string) {
 				return
 			}
 
-			Runwithcolor("git", []string{"checkout", "-b", branchName})
+			RunInTerminalWithColor("git", []string{"checkout", "-b", branchName})
 			return
 		}
 	}
-	err = Runwithcolor("git", args)
+	err = RunInTerminalWithColor("git", args)
 	if err != nil {
 		fmt.Println("DEBUG: CMD may not be allow listed", err)
 	}

@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/c-bata/go-prompt"
+	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 	"os"
 	"strings"
@@ -54,19 +55,7 @@ var ShellCmd = &cobra.Command{
 				fmt.Println(err)
 				return
 			}
-			sub := parsedArgs[0]
-			if sub == "checkout" || sub == "switch" || sub == "co" {
-				branchName := strings.TrimSpace(parsedArgs[len(parsedArgs)-1])
-				if strings.HasPrefix(branchName, "origin/") {
-					branchName = branchName[7:]
-				}
-				parsedArgs[len(parsedArgs)-1] = branchName
-			}
-			err = Runwithcolor("git", parsedArgs)
-			if err != nil {
-				fmt.Println("DEBUG: CMD may not be allow listed")
-			}
-			return
+			RunGitCommandWithArgs(parsedArgs)
 		}
 		parsedArgs, err := parseCommandLine(resp)
 		if err != nil {
@@ -116,6 +105,44 @@ func shellCommandCompleter(suggestionMap map[string][]prompt.Suggest) func(d pro
 		//suggestions = append(suggestionMap["_any"], suggestions...)
 		return prompt.FilterContains(suggestions, d.GetWordBeforeCursor(), true)
 	}
+}
+
+func RunGitCommandWithArgs(args []string) {
+	var err error
+	sub := args[0]
+	if sub == "checkout" || sub == "switch" || sub == "co" {
+		branchName := strings.TrimSpace(args[len(args)-1])
+		if strings.HasPrefix(branchName, "origin/") {
+			branchName = branchName[7:]
+		}
+		args[len(args)-1] = branchName
+
+		branchExists := checkoutBranch(branchName)
+		if !branchExists {
+			prompt := promptui.Prompt{
+				Label:     "Branch does not exist. Do you want to create it",
+				IsConfirm: true,
+			}
+
+			_, err := prompt.Run()
+
+			if err != nil {
+				fmt.Printf("Cancelling...")
+				return
+			}
+
+			Runwithcolor("git", []string{"checkout", "-b", branchName})
+			return
+		}
+	}
+	err = Runwithcolor("git", args)
+	if err != nil {
+		fmt.Println("DEBUG: CMD may not be allow listed", err)
+	}
+	if sub == "checkout" || sub == "switch" || sub == "co" {
+		refreshBranch()
+	}
+	return
 }
 
 func parseCommandLine(command string) ([]string, error) {
